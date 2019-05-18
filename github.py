@@ -1,59 +1,56 @@
 import requests
 from lxml import etree
- 
- 
-class Login(object):
+class Login:
     def __init__(self):
         self.headers = {
-            'Referer': 'https://github.com/',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36',
-            'Host': 'github.com'
+            'Host': "github.com",
+            'Referer': "https://github.com/login?return_to=%2Fjoin",
+            'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3710.0 Safari/537.36"
         }
+        #登陆url
         self.login_url = 'https://github.com/login'
+        #分析后的真实url
         self.post_url = 'https://github.com/session'
+        #成功登陆后，要访问的url
         self.logined_url = 'https://github.com/settings/profile'
+        # requests库中Session，维持一个会话，自动处理Cookies
         self.session = requests.Session()
- 
+
+    # 获取authenticity_token信息
     def token(self):
         response = self.session.get(self.login_url, headers=self.headers)
         selector = etree.HTML(response.text)
-        token = selector.xpath('//div//input[2]/@value')
+        token = selector.xpath('//div//input[2]/@value')[0]
+        print('authenticity_token：',token)
         return token
- 
-    def login(self, email, password):
+        
+    #登陆后获取个人名称和邮箱
+    def profile(self,html):
+        selector = etree.HTML(html)
+        name = selector.xpath('//input[@id="user_profile_name"]/@value')
+        email= selector.xpath('//select[@id="user_profile_email"]/option[2]/text()')
+        print(name,email)
+        
+    #模拟登陆，实现登陆
+    def login(self,Username,password):
         post_data = {
             'commit': 'Sign in',
             'utf8': '✓',
-            'authenticity_token': self.token()[0],
-            'login': email,
+            'authenticity_token': self.token(),
+            'login': Username,
             'password': password
         }
-        print(post_data)
+        
         response = self.session.post(self.post_url, data=post_data, headers=self.headers)
-        print(response.status_code)
         if response.status_code == 200:
-            print(response.text)
-            self.dynamics(response.text)
- 
+            print('登陆成功')
+            
+        # 登陆后到其他页面https://github.com/settings/profile爬取个人名称和邮箱
         response = self.session.get(self.logined_url, headers=self.headers)
         if response.status_code == 200:
-            #print(response.text)
             self.profile(response.text)
- 
-    def dynamics(self, html):
-        selector = etree.HTML(html)
-        dynamics = selector.xpath('//div[contains(@class, "news")]//div[contains(@class, "alert")]')
-        for item in dynamics:
-            dynamic = ' '.join(item.xpath('.//div[@class="title"]//text()')).strip()
-            print(dynamic)
- 
-    def profile(self, html):
-        selector = etree.HTML(html)
-        #name = selector.xpath('//input[@id="user_profile_name"]/@value')[0]
-        email = selector.xpath('//select[@id="user_profile_email"]/option[@value!=""]/text()')
-        print(email)
- 
- 
+
 if __name__ == "__main__":
     login = Login()
-    login.login(email='2717346533@qq.com', password='qaz246135')
+    login.login(Username='2717346533@qq.com', password='密码')
+
